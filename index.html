@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raw File Storage</title>
+  <meta name="description" content="Upload files to GitHub and get raw links. Files larger than 100MB are split into chunks automatically." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <h1>Raw File Storage</h1>
+      <p class="subtitle">
+        Upload any file and get direct <code>raw.githubusercontent.com</code> links.
+        Files over the GitHub limit are automatically split into chunks.
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card config-card">
+      <h2>GitHub Configuration</h2>
+      <p class="hint">
+        A personal access token with <strong>Contents: Read &amp; Write</strong> on your storage repo is required.
+        Nothing is sent anywhere except the GitHub API.
+      </p>
+      <div class="grid">
+        <label>
+          Personal Access Token
+          <input type="password" id="token" placeholder="github_pat_..." autocomplete="off" />
+        </label>
+        <label>
+          Storage Repository
+          <input type="text" id="repo" placeholder="owner/repo" />
+        </label>
+        <label>
+          Branch
+          <input type="text" id="branch" placeholder="main" value="main" />
+        </label>
+        <label>
+          Folder prefix (optional)
+          <input type="text" id="prefix" placeholder="storage" value="storage" />
+        </label>
+        <label>
+          Chunk size (MB)
+          <input type="number" id="chunkSize" min="1" max="90" value="20" />
+        </label>
+      </div>
+      <div class="row">
+        <button id="saveConfig" class="btn secondary">Save settings</button>
+        <button id="testConfig" class="btn secondary">Test connection</button>
+        <span id="configStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="card upload-card">
+      <h2>Upload a file</h2>
+      <div id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" hidden />
+        <p>Drag &amp; drop a file here, or <button id="browseBtn" class="link">browse</button></p>
+        <p class="small" id="fileInfo">No file selected.</p>
+      </div>
+      <div class="row">
+        <button id="uploadBtn" class="btn primary" disabled>Upload to GitHub</button>
+        <button id="cancelBtn" class="btn secondary" disabled>Cancel</button>
+      </div>
+      <div class="progress-wrap">
+        <div id="progressBar" class="progress-bar" style="width:0%"></div>
+      </div>
+      <p id="progressText" class="small"></p>
+    </section>
+
+    <section class="card results-card" id="resultsCard" hidden>
+      <h2>Raw links</h2>
+      <p class="small" id="resultsSummary"></p>
+      <div class="row">
+        <button id="copyAllBtn" class="btn secondary">Copy all links</button>
+        <button id="downloadBtn" class="btn secondary">Download reconstructed file</button>
+        <button id="newUploadBtn" class="btn secondary">New upload</button>
+      </div>
+      <ul id="linksList" class="links"></ul>
+      <details>
+        <summary>Manifest</summary>
+        <pre id="manifestPreview" class="manifest"></pre>
+      </details>
+    </section>
+
+    <section class="card notes-card">
+      <h2>How it works</h2>
+      <ul>
+        <li>The file is split into chunks of the chosen size (default 20&nbsp;MB, safely under GitHub's ~100&nbsp;MB per-file limit).</li>
+        <li>Each chunk is uploaded as its own file via the GitHub Contents API.</li>
+        <li>A <code>manifest.json</code> records the original name, size, chunk count and order.</li>
+        <li>You get one raw link per chunk plus a manifest link. Large downloads can be rebuilt client-side.</li>
+        <li>Chunk size is capped at 90&nbsp;MB to stay below GitHub limits even after base64 encoding.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Raw File Storage — powered by the GitHub Contents API.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+EOF
