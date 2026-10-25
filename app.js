@@ -47,6 +47,7 @@
   });
 
   els.testConfig.addEventListener("click", async () => {
+    syncConfigFromUI();
     try {
       await apiRepo();
       setStatus("Connection OK.", "ok");
@@ -89,8 +90,17 @@
   els.uploadBtn.addEventListener("click", () => startUpload());
   els.cancelBtn.addEventListener("click", () => { state.cancel = true; });
 
+  function syncConfigFromUI() {
+    state.token = els.token.value.trim();
+    state.repo = els.repo.value.trim();
+    state.branch = els.branch.value.trim() || "main";
+    state.prefix = els.prefix.value.trim() || "storage";
+    state.chunkSizeMB = Math.min(90, Math.max(1, Number(els.chunkSize.value) || 20));
+  }
+
   async function startUpload() {
     if (!state.file) return;
+    syncConfigFromUI();
     if (!state.token || !state.repo) {
       setStatus("Set token and repo first.", "err");
       return;
