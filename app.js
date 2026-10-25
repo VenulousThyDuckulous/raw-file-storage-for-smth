@@ -22,7 +22,7 @@
     progressBar: $("progressBar"), progressText: $("progressText"),
     resultsCard: $("resultsCard"), resultsSummary: $("resultsSummary"),
     linksList: $("linksList"), manifestPreview: $("manifestPreview"),
-    copyAllBtn: $("copyAllBtn"), downloadBtn: $("downloadBtn"), newUploadBtn: $("newUploadBtn"),
+    copyAllBtn: $("copyAllBtn"), copyDownloadBtn: $("copyDownloadBtn"), downloadBtn: $("downloadBtn"), newUploadBtn: $("newUploadBtn"),
   };
 
   // ---- init ----
@@ -159,6 +159,7 @@
         chunks: Array.from({ length: totalChunks }, (_, i) =>
           `chunk_${String(i).padStart(4, "0")}.bin`
         ),
+        chunkUrls: chunkUrls.slice(),
         uploadedAt: new Date().toISOString(),
         storageRepo: `${owner}/${repo}`,
         branch,
@@ -219,6 +220,14 @@
     copyText(text);
   });
 
+  els.copyDownloadBtn.addEventListener("click", () => {
+    if (!state.results) return;
+    const url = new URL(location.href);
+    url.search = "";
+    url.searchParams.set("manifest", state.results.manifestUrl);
+    copyText(url.toString());
+  });
+
   els.downloadBtn.addEventListener("click", async () => {
     if (!state.results) return;
     try {
@@ -253,6 +262,37 @@
     els.resultsCard.hidden = true;
     setProgress(0, "");
   });
+
+  async function reconstructFromManifestUrl(manifestUrl) {
+    setProgress(0, "Loading manifest…");
+    const res = await fetch(manifestUrl);
+    if (!res.ok) throw new Error("Failed to load manifest");
+    const manifest = await res.json();
+    const urls = Array.isArray(manifest.chunkUrls) && manifest.chunkUrls.length
+      ? manifest.chunkUrls
+      : (manifest.chunks || []).map((name) => {
+          const [owner, repo] = String(manifest.storageRepo).split("/");
+          return `https://raw.githubusercontent.com/${owner}/${repo}/${manifest.branch}/${manifest.prefix}/${name}`;
+        });
+    if (!urls.length) throw new Error("Manifest has no chunks");
+
+    const parts = [];
+    for (let i = 0; i < urls.length; i++) {
+      setProgress(Math.round((i / urls.length) * 90), `Fetching chunk ${i + 1} of ${urls.length}…`);
+      const r = await fetch(urls[i]);
+      if (!r.ok) throw new Error("Failed to fetch chunk " + i);
+      parts.push(await r.arrayBuffer());
+    }
+    const blob = new Blob(parts, { type: manifest.type || "application/octet-stream" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = manifest.name || "download";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+    setProgress(100, "Download started.");
+  }
 
   // ---- helpers ----
   function setProgress(pct, text) {
@@ -345,5 +385,10 @@
       ta.remove();
     }
   }
+
+  const __params = new URLSearchParams(location.search);
+  const __m = __params.get("manifest");
+  if (__m) {
+    reconstructFromManifestUrl(__m).catch((e) => setProgress(0, "Error: " + e.message));
+  }
 })();
-EOF
